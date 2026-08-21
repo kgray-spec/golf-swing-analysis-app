@@ -47,8 +47,12 @@ address bar.
 
 **Linking two swings at impact** is the workflow that matters. Tap **Linked** to
 unlink, scrub each swing independently until both sit at the same position in the
-motion, then tap **Linked** again. That locks the offset between them, and from
-then on one scrubber drives both in perfect relative sync.
+motion, then tap **Linked** again. That locks the offset between them.
+
+In **Split**, each video gets its own scrubber directly underneath it instead of
+one shared one — drag either directly, no need to focus a video first. While
+**Linked**, dragging either scrubber carries the other along at the locked
+offset; unlinked, each moves independently.
 
 **Fluoro drawing tools** (left rail, or keys `P L W O B A`): freehand, straight
 line, arrow, circle, box, and an angle tool that reads out degrees live. Seven
@@ -65,6 +69,13 @@ video — the drawing tools always draw, so the hand tool is the dedicated way t
 grab and move the picture instead. Both zoom and pan are recorded too —
 whatever crop you're looking at when you hit Record is what ends up in the
 exported lesson.
+
+**Flip** (top of the rail, or key `F`): mirrors the focused swing horizontally
+— handy when a student filmed from the "wrong" side and you want both swings
+facing the same way for comparison. Drawings, zoom, and pan all stay correctly
+attached to the video regardless of flip state — a line drawn along someone's
+trail arm stays on their trail arm whether you flip before or after drawing
+it, and it's captured correctly in recordings too.
 
 **Frame-accurate transport**: play/pause, single-frame step both ways, and
 0.1× / ¼× / ½× / 1× speeds. Set the **fps** chip to match your source footage
@@ -207,7 +218,7 @@ that; it just can't fetch the file for you.
 
 `Space` play/pause · `←` `→` frame step · `1`–`4` view mode ·
 `P` pen `L` line `W` arrow `O` circle `B` box `A` angle `H` hand (pan) ·
-`+` `-` `0` zoom in / out / reset ·
+`+` `-` `0` zoom in / out / reset · `F` flip ·
 `U` undo · `C` clear · `S` link/unlink · `R` record
 
 ---

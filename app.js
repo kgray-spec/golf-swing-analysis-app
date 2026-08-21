@@ -50,6 +50,7 @@ class Deck {
     this.nameEl = $('.deck__name', this.el);
     this.empty  = $('.deck__empty', this.el);
     this.empty.addEventListener('click', () => this.file.click());
+    this.buildScrub();
 
     this.strokes = [];
     this.draft   = null;     // stroke in progress
@@ -57,7 +58,7 @@ class Deck {
     this.loaded  = false;
     this.url     = null;
 
-    this.zoom = 1; this.panX = 0; this.panY = 0;
+    this.zoom = 1; this.panX = 0; this.panY = 0; this.flipped = false;
 
     this.video.muted = true;
     this.video.playsInline = true;
@@ -74,6 +75,7 @@ class Deck {
       this.resize();
       if (this === focused) refreshTimeline();
       updatePipAspect();
+      updateScrubVisibility();
     });
 
     new ResizeObserver(() => this.resize()).observe(this.el);
@@ -94,7 +96,7 @@ class Deck {
     this.video.load();
     this.nameEl.textContent = label;
     this.strokes = []; this.draft = null; this.anglePts = null;
-    this.zoom = 1; this.panX = 0; this.panY = 0;
+    this.zoom = 1; this.panX = 0; this.panY = 0; this.flipped = false;
     applyZoom(this);
     this.redraw();
     toast(`Swing ${this.id}: ${label}`);
@@ -107,6 +109,7 @@ class Deck {
     this.el.classList.remove('has-video');
     this.nameEl.textContent = '—';
     this.strokes = []; this.redraw();
+    updateScrubVisibility();
   }
 
   /* content box of the video inside the deck element (object-fit: contain) */
@@ -147,9 +150,16 @@ class Deck {
     let drawing = false, id = null;
     let panId = null, panStart = null;
 
+    /* Strokes are always stored in canonical (unflipped) frame coordinates.
+       When the deck is flipped, mirror the click position going in so it
+       still lands under the cursor — the shared CSS transform mirrors the
+       stored point back out on render, keeping drawing and display in sync. */
     const norm = e => {
       const b = cv.getBoundingClientRect(), r = this.contentRect(b.width, b.height);
-      return { x: (e.clientX - b.left - r.x) / r.w, y: (e.clientY - b.top - r.y) / r.h };
+      let x = (e.clientX - b.left - r.x) / r.w;
+      const y = (e.clientY - b.top - r.y) / r.h;
+      if (this.flipped) x = 1 - x;
+      return { x, y };
     };
 
     cv.addEventListener('pointerdown', e => {
@@ -189,7 +199,8 @@ class Deck {
       if (panId !== null && e.pointerId === panId) {
         /* pan only shifts the transform — no need to touch the canvas
            bitmap, so skip the heavier applyZoom()/resize() path here */
-        this.panX = panStart.panX + (e.clientX - panStart.x);
+        const dir = this.flipped ? -1 : 1;   // flip mirrors drag direction too
+        this.panX = panStart.panX + (e.clientX - panStart.x) * dir;
         this.panY = panStart.panY + (e.clientY - panStart.y);
         clampPan(this);
         applyTransform(this);
@@ -226,6 +237,53 @@ class Deck {
     };
     cv.addEventListener('pointerup', end);
     cv.addEventListener('pointercancel', end);
+  }
+
+  /* per-deck mini scrubber — shown instead of the single global one when
+     split view has two videos, so either can be dragged directly without
+     having to focus it first */
+  buildScrub() {
+    const el = document.createElement('div');
+    el.className = 'deck__scrub';
+    el.innerHTML =
+      '<span class="deck__scrub-time">0:00.00</span>' +
+      '<div class="deck__scrub-track"><div class="deck__scrub-fill"></div><div class="deck__scrub-knob"></div></div>' +
+      '<span class="deck__scrub-time deck__scrub-time--end">0:00.00</span>';
+    this.el.appendChild(el);
+
+    this.scrubEl    = el;
+    this.scrubNow   = el.children[0];
+    this.scrubTrack = el.children[1];
+    this.scrubFill  = this.scrubTrack.children[0];
+    this.scrubKnob  = this.scrubTrack.children[1];
+    this.scrubEnd   = el.children[2];
+
+    let dragging = false;
+    const at = e => {
+      const b = this.scrubTrack.getBoundingClientRect();
+      return clamp((e.clientX - b.left) / b.width, 0, 1) * (this.video.duration || 0);
+    };
+    this.scrubTrack.addEventListener('pointerdown', e => {
+      dragging = true;
+      this.scrubTrack.setPointerCapture(e.pointerId);
+      focus(this);
+      seekDeck(this, at(e));
+    });
+    this.scrubTrack.addEventListener('pointermove', e => { if (dragging) seekDeck(this, at(e)); });
+    const endDrag = () => { dragging = false; };
+    this.scrubTrack.addEventListener('pointerup', endDrag);
+    this.scrubTrack.addEventListener('pointercancel', endDrag);
+  }
+
+  /* keep this deck's own mini scrubber in sync with its video */
+  refreshScrub() {
+    if (!this.scrubEl) return;
+    const dur = this.video.duration || 0, cur = this.video.currentTime || 0;
+    this.scrubNow.textContent = fmt(cur);
+    this.scrubEnd.textContent = fmt(dur);
+    const pct = dur ? (cur / dur) * 100 : 0;
+    this.scrubFill.style.width = pct + '%';
+    this.scrubKnob.style.left  = pct + '%';
   }
 }
 
@@ -330,9 +388,16 @@ function clampPan(d) {
 }
 
 function applyTransform(d) {
-  d.view.style.transform = (d.zoom === 1 && d.panX === 0 && d.panY === 0)
+  /* Flip is the outermost transform — it mirrors the already zoomed/panned
+     picture as a whole, so it never has to be factored into zoom/pan math
+     itself (see norm(), setZoom(), and the hand-tool drag for the few
+     places that DO need to know about it: converting screen-space input
+     back into this same canonical, unflipped space). */
+  const flip = d.flipped ? 'scaleX(-1) ' : '';
+  const panzoom = (d.zoom === 1 && d.panX === 0 && d.panY === 0)
     ? ''
     : `translate(${d.panX}px, ${d.panY}px) scale(${d.zoom})`;
+  d.view.style.transform = flip + panzoom;
 }
 
 /* zoom level changed: re-rasterize the canvas at a resolution matched
@@ -347,8 +412,10 @@ function setZoom(d, zoom, anchorClientX, anchorClientY) {
   const z = clamp(zoom, ZOOM_MIN, ZOOM_MAX);
   if (anchorClientX != null && old !== z) {
     const b = d.el.getBoundingClientRect();
-    const mx = anchorClientX - b.left, my = anchorClientY - b.top;
+    let mx = anchorClientX - b.left;
+    const my = anchorClientY - b.top;
     const cx = b.width / 2, cy = b.height / 2;
+    if (d.flipped) mx = 2 * cx - mx;   // zoom toward the visible point, not its mirror
     d.panX = (mx - cx) - (z / old) * (mx - cx - d.panX);
     d.panY = (my - cy) - (z / old) * (my - cy - d.panY);
   }
@@ -359,9 +426,15 @@ function setZoom(d, zoom, anchorClientX, anchorClientY) {
 function zoomBy(d, factor, anchorX, anchorY) { setZoom(d, d.zoom * factor, anchorX, anchorY); }
 function resetZoom(d) { d.zoom = 1; d.panX = 0; d.panY = 0; applyZoom(d); }
 
+function toggleFlip(d) {
+  d.flipped = !d.flipped;
+  applyTransform(d);
+  updateZoomUI();
+}
+
 function updateZoomUI() {
-  const on = focused.zoom > 1.001;
-  $('#btnZoomReset').classList.toggle('is-active', on);
+  $('#btnZoomReset').classList.toggle('is-active', focused.zoom > 1.001);
+  $('#btnFlip').classList.toggle('is-active', focused.flipped);
 }
 
 /* the visible crop for a deck, as both a video-source pixel rect
@@ -395,6 +468,9 @@ function drawZoomedDeck(c, deck, destX, destY, destW, destH) {
 
   c.save();
   c.beginPath(); c.rect(destX, destY, destW, destH); c.clip();
+  /* mirror image + strokes together around the panel's own centre line,
+     matching the live view's shared-transform flip exactly */
+  if (deck.flipped) { c.translate(2 * destX + destW, 0); c.scale(-1, 1); }
 
   const { sx, sy, sw, sh, r } = deckViewport(deck, destX, destY, destW, destH);
   const csx = Math.max(0, sx), csy = Math.max(0, sy);
@@ -435,6 +511,7 @@ const stage = $('#stage');
 function focus(d) {
   focused = d;
   refreshTimeline();
+  updateZoomUI();
 }
 
 /* which decks the transport drives */
@@ -453,6 +530,7 @@ function setLayout(name) {
   $$('#layoutSeg .seg').forEach(b => b.setAttribute('aria-selected', String(b.dataset.layout === name)));
   moveSegThumb();
   if (name !== 'single' && !B.loaded) toast('Load swing B to use this view');
+  updateScrubVisibility();
   requestAnimationFrame(() => decks.forEach(d => d.resize()));
 }
 
@@ -560,6 +638,21 @@ function seek(t) {
   refreshTimeline();
 }
 
+/* Seek one specific deck directly — used by each deck's own mini scrubber
+   in split view. Generalizes seek() to work from either deck as the
+   reference, so dragging B's scrubber while linked correctly carries A
+   along too (not just A driving B). */
+function seekDeck(d, t) {
+  pause();
+  d.video.currentTime = clamp(t, 0, d.video.duration || 0);
+  if (state.linked && A.loaded && B.loaded && state.layout !== 'single') {
+    const other = d === A ? B : A;
+    const target = d === A ? d.video.currentTime + state.offset : d.video.currentTime - state.offset;
+    other.video.currentTime = clamp(target, 0, other.video.duration || 0);
+  }
+  refreshTimeline();
+}
+
 function setSpeed(s) {
   state.speed = s; prefs.speed = s; savePrefs();
   decks.forEach(d => d.video.playbackRate = s);
@@ -578,7 +671,8 @@ function tick() {
 }
 
 const timeNow = $('#timeNow'), timeEnd = $('#timeEnd'),
-      fill = $('#scrubFill'), knob = $('#scrubKnob'), track = $('#scrubTrack');
+      fill = $('#scrubFill'), knob = $('#scrubKnob'), track = $('#scrubTrack'),
+      globalScrub = $('#globalScrub');
 
 let lastCur = -1, lastDur = -1, lastPlaying = null;
 
@@ -596,7 +690,19 @@ function refreshTimeline() {
   const pct = dur ? (cur / dur) * 100 : 0;
   fill.style.width = pct + '%';
   knob.style.left  = pct + '%';
+  A.refreshScrub(); B.refreshScrub();
   syncIcons();
+}
+
+/* Split view gets its own scrubber per deck instead of the single global
+   one — dragging either seeks that video directly, no need to focus it
+   first. Any other layout only ever shows one video at a time, so the
+   shared transport-bar scrubber keeps making sense there. */
+function updateScrubVisibility() {
+  const splitBoth = state.layout === 'split';
+  A.scrubEl.classList.toggle('is-shown', splitBoth && A.loaded);
+  B.scrubEl.classList.toggle('is-shown', splitBoth && B.loaded);
+  globalScrub.classList.toggle('hidden', splitBoth && (A.loaded || B.loaded));
 }
 
 /* scrubbing */
@@ -1155,6 +1261,7 @@ decks.forEach(d => {
 $('#btnZoomIn').addEventListener('click', () => zoomBy(focused, 1.35));
 $('#btnZoomOut').addEventListener('click', () => zoomBy(focused, 1 / 1.35));
 $('#btnZoomReset').addEventListener('click', () => resetZoom(focused));
+$('#btnFlip').addEventListener('click', () => toggleFlip(focused));
 
 /* ---------- line weight ---------- */
 function setWeight(w) {
@@ -1180,6 +1287,7 @@ addEventListener('keydown', e => {
   else if (k === '+' || k === '=') { e.preventDefault(); zoomBy(focused, 1.35); }
   else if (k === '-' || k === '_') { e.preventDefault(); zoomBy(focused, 1 / 1.35); }
   else if (k === '0')     { resetZoom(focused); }
+  else if (k === 'f')     { toggleFlip(focused); }
   else if (['1','2','3','4'].includes(k)) setLayout(['single','split','pip','overlay'][+k - 1]);
 });
 
