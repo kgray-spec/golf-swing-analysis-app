@@ -111,12 +111,24 @@
 
   <div class="rail__divider"></div>
 
-  <div class="rail__group rail__group--colors" id="colorGroup"></div>
+  <div class="rail__group">
+    <div class="dropdown" id="colorDropdown">
+      <button class="tool dd-trigger" id="colorTrigger" title="Colour">
+        <span class="dd-trigger__swatch" id="colorTriggerDot"></span>
+      </button>
+      <div class="dropdown__panel dropdown__panel--grid" id="colorPanel"></div>
+    </div>
 
-  <div class="rail__group rail__group--weights" id="weightGroup">
-    <button class="weight" data-weight="0.6" title="Thin line"><span class="weight__dot" style="height:3px"></span></button>
-    <button class="weight is-active" data-weight="1" title="Medium line"><span class="weight__dot" style="height:5px"></span></button>
-    <button class="weight" data-weight="1.7" title="Thick line"><span class="weight__dot" style="height:8px"></span></button>
+    <div class="dropdown" id="weightDropdown">
+      <button class="tool dd-trigger" id="weightTrigger" title="Line thickness">
+        <span class="weight__dot" id="weightTriggerDot" style="height:5px"></span>
+      </button>
+      <div class="dropdown__panel" id="weightPanel">
+        <button class="weight" data-weight="0.6" title="Thin line"><span class="weight__dot" style="height:3px"></span></button>
+        <button class="weight is-active" data-weight="1" title="Medium line"><span class="weight__dot" style="height:5px"></span></button>
+        <button class="weight" data-weight="1.7" title="Thick line"><span class="weight__dot" style="height:8px"></span></button>
+      </div>
+    </div>
   </div>
 
   <div class="rail__divider"></div>

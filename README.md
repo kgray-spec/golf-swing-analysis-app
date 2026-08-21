@@ -55,11 +55,13 @@ one shared one — drag either directly, no need to focus a video first. While
 offset; unlinked, each moves independently.
 
 **Fluoro drawing tools** (left rail, or keys `P L W O B A`): freehand, straight
-line, arrow, circle, box, and an angle tool that reads out degrees live. Seven
-neon colours including red. Three line weights (thin / medium / thick) next to
-the colour swatches. Drawings are stored relative to the video frame, so they
-stay glued in place when you rotate the device, resize the window, switch view
-modes, or zoom/pan.
+line, arrow, circle, box, and an angle tool that reads out degrees live. Colour
+(seven neon options including red) and line weight (thin / medium / thick) are
+each a dropdown — tap the swatch or thickness dot in the rail to pop open the
+picker, tap outside or hit `Esc` to close it. Keeps the rail short enough that
+it never needs to scroll. Drawings are stored relative to the video frame, so
+they stay glued in place when you rotate the device, resize the window, switch
+view modes, or zoom/pan.
 
 **Zoom & pan** (top of the left rail): the magnifying-glass buttons zoom the
 focused swing in for a closer look, or scroll the mouse wheel over a video

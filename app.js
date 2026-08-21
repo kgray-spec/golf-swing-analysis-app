@@ -1016,8 +1016,10 @@ btnWebcam.addEventListener('click', toggleWebcam);
 /* ============================================================
    UI wiring
    ============================================================ */
-/* colour swatches */
-const colorGroup = $('#colorGroup');
+/* colour swatches — live in a popover off the trigger button so the rail
+   doesn't have to give up permanent height to seven options at once */
+const colorPanel = $('#colorPanel'), colorTriggerDot = $('#colorTriggerDot');
+colorTriggerDot.style.background = state.color;
 COLORS.forEach(c => {
   const b = document.createElement('button');
   b.className = 'swatch' + (c.hex === state.color ? ' is-active' : '');
@@ -1027,8 +1029,10 @@ COLORS.forEach(c => {
   b.addEventListener('click', () => {
     state.color = c.hex; prefs.color = c.hex; savePrefs();
     $$('.swatch').forEach(s => s.classList.toggle('is-active', s === b));
+    colorTriggerDot.style.background = c.hex;
+    closeDropdowns();
   });
-  colorGroup.appendChild(b);
+  colorPanel.appendChild(b);
 });
 
 /* tools — the hand tool lives in the zoom rail group, drawing tools in
@@ -1264,17 +1268,44 @@ $('#btnZoomReset').addEventListener('click', () => resetZoom(focused));
 $('#btnFlip').addEventListener('click', () => toggleFlip(focused));
 
 /* ---------- line weight ---------- */
+const weightTriggerDot = $('#weightTriggerDot');
 function setWeight(w) {
   state.weight = w; prefs.weight = w; savePrefs();
-  $$('#weightGroup .weight').forEach(b => b.classList.toggle('is-active', +b.dataset.weight === w));
+  $$('#weightPanel .weight').forEach(b => b.classList.toggle('is-active', +b.dataset.weight === w));
+  weightTriggerDot.style.height = $(`#weightPanel .weight[data-weight="${w}"] .weight__dot`).style.height;
 }
-$$('#weightGroup .weight').forEach(b => b.addEventListener('click', () => setWeight(+b.dataset.weight)));
+$$('#weightPanel .weight').forEach(b => b.addEventListener('click', () => { setWeight(+b.dataset.weight); closeDropdowns(); }));
 setWeight(state.weight);
+
+/* ---------- rail dropdowns (colour / thickness) ---------- */
+function closeDropdowns(except) {
+  $$('.dropdown.is-open').forEach(d => { if (d !== except) d.classList.remove('is-open'); });
+}
+function toggleDropdown(el) {
+  const wasOpen = el.classList.contains('is-open');
+  closeDropdowns();
+  if (!wasOpen) {
+    /* position:fixed panel — compute screen coords from the trigger now,
+       since the panel escapes the rail's own layout (see CSS comment) */
+    const trigger = $('.dd-trigger', el);
+    const panel = $('.dropdown__panel', el);
+    const r = trigger.getBoundingClientRect();
+    panel.style.left = (r.right + 10) + 'px';
+    panel.style.top  = (r.top + r.height / 2) + 'px';
+    el.classList.add('is-open');
+  }
+}
+$('#colorTrigger').addEventListener('click', () => toggleDropdown($('#colorDropdown')));
+$('#weightTrigger').addEventListener('click', () => toggleDropdown($('#weightDropdown')));
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.dropdown')) closeDropdowns();
+}, true);
 
 /* ---------- keyboard ---------- */
 addEventListener('keydown', e => {
   if (e.target.matches('input,textarea')) return;
   const k = e.key.toLowerCase();
+  if (k === 'escape') { closeDropdowns(); return; }
   const map = { p: 'pen', l: 'line', w: 'arrow', o: 'circle', b: 'rect', a: 'angle', h: 'hand' };
   if (map[k]) { setTool(map[k]); return; }
   if (k === ' ')          { e.preventDefault(); toggle(); }
