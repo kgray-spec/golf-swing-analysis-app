@@ -1,0 +1,5 @@
+.env
+.sync-state.json
+Library/*
+!Library/README.txt
+.claude/
