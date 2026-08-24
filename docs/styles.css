@@ -235,6 +235,12 @@ button{ font:inherit; color:inherit; background:none; border:0; padding:0; curso
 }
 /* keep the two name pills from stacking on top of each other */
 .stage[data-layout="overlay"] #deckB .deck__tag{ mix-blend-mode:normal; left:auto; right:10px; }
+/* B sits directly on top of A here — without this, every click/wheel/
+   draw on the stage hits the ghost overlay and A (the swing actually
+   being coached) becomes completely unreachable, same reasoning as
+   PiP's inset above. Scoped to .has-video: while B is still empty its
+   own "Add swing B" prompt is what's sitting up there and needs clicks. */
+.stage[data-layout="overlay"] #deckB.has-video{ pointer-events:none; }
 
 .floating{
   position:absolute; z-index:8; bottom:14px; left:50%; transform:translateX(-50%);

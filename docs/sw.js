@@ -1,5 +1,5 @@
 /* Offline shell. Bump CACHE when you change app files. */
-const CACHE = 'swing-v8';
+const CACHE = 'swing-v9';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.json', './assets/icon.svg'];
 
 self.addEventListener('install', e => {
@@ -15,6 +15,11 @@ self.addEventListener('activate', e => {
 /* network-first so edits show up immediately, cache as offline fallback */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  /* video is streamed as byte-range requests — caching those 206
+     partial-content responses would just overwrite each other under
+     the same URL key, and could serve a truncated clip if one ever
+     got replayed while offline. Let those go straight to the network. */
+  if (e.request.headers.has('range')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {

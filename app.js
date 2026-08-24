@@ -1287,15 +1287,24 @@ $$('#sheetLoad .row').forEach(r => r.addEventListener('click', () => {
 }));
 
 function swap() {
-  const a = { src: A.video.src, name: A.nameEl.textContent, strokes: A.strokes, url: A.url, loaded: A.loaded };
-  const b = { src: B.video.src, name: B.nameEl.textContent, strokes: B.strokes, url: B.url, loaded: B.loaded };
+  /* zoom/pan/flip describe how THIS video is framed, so they have to
+     travel with it too — otherwise the pane keeps its old crop and
+     applies it to whatever new video just landed there. */
+  const snap = d => ({
+    src: d.video.src, name: d.nameEl.textContent, strokes: d.strokes, url: d.url, loaded: d.loaded,
+    zoom: d.zoom, panX: d.panX, panY: d.panY, flipped: d.flipped,
+  });
+  const a = snap(A), b = snap(B);
   const put = (d, s) => {
     d.url = s.url; d.loaded = s.loaded; d.strokes = s.strokes;
+    d.zoom = s.zoom; d.panX = s.panX; d.panY = s.panY; d.flipped = s.flipped;
     if (s.src) { d.video.src = s.src; d.video.load(); d.el.classList.add('has-video'); }
     else { d.video.removeAttribute('src'); d.video.load(); d.el.classList.remove('has-video'); }
-    d.nameEl.textContent = s.name; d.redraw();
+    d.nameEl.textContent = s.name;
+    d.resize();   // clamps pan for the new content box, re-applies the transform, redraws
   };
   put(A, b); put(B, a);
+  updateZoomUI();
   toast('Swapped');
 }
 
@@ -1354,11 +1363,13 @@ $$('.dropdown__panel').forEach(p => dropdownLayer.appendChild(p));
 
 function closeDropdowns() {
   $$('.dropdown__panel.is-open').forEach(p => p.classList.remove('is-open'));
+  $$('.dd-trigger.is-active').forEach(t => t.classList.remove('is-active'));
 }
 function openDropdown(trigger, panel) {
   const wasOpen = panel.classList.contains('is-open');
   closeDropdowns();
   if (wasOpen) return;
+  trigger.classList.add('is-active');
   /* clamped to the viewport: on short screens the colour/weight
      triggers sit near the bottom of the rail, and an unclamped
      centre-on-trigger placement pushed the panel off-screen */
@@ -1381,7 +1392,11 @@ document.addEventListener('pointerdown', e => {
 addEventListener('keydown', e => {
   if (e.target.matches('input,textarea')) return;
   const k = e.key.toLowerCase();
-  if (k === 'escape') { closeDropdowns(); return; }
+  if (k === 'escape') { closeDropdowns(); closeSheet(); return; }
+  /* the Load sheet sits on top of everything else, but nothing underneath
+     it actually stops listening — layout/tool/record shortcuts were firing
+     invisibly behind an open sheet with only Escape excluded from that */
+  if (document.body.classList.contains('sheet-open')) return;
   const map = { p: 'pen', l: 'line', w: 'arrow', o: 'circle', b: 'rect', a: 'angle', h: 'hand' };
   if (map[k]) { setTool(map[k]); return; }
   if (k === ' ')          { e.preventDefault(); toggle(); }
