@@ -34,7 +34,7 @@
   </div>
 
   <div class="bar__right">
-    <button class="btn btn--plain" id="btnNativePip" title="Float video (Picture in Picture)">
+    <button class="btn btn--plain" id="btnNativePip" title="Float video (Picture in Picture)" aria-label="Float video (Picture in Picture)">
       <svg viewBox="0 0 24 24" class="ico"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12.5" y="12" width="7" height="5.5" rx="1.5"/></svg>
     </button>
   </div>
@@ -82,7 +82,7 @@
 
   <div class="webcam" id="webcamBubble" data-shape="circle" hidden>
     <video class="webcam__video" autoplay muted playsinline></video>
-    <button class="webcam__shape" id="webcamShapeBtn" title="Switch shape">
+    <button class="webcam__shape" id="webcamShapeBtn" title="Switch shape" aria-label="Switch face-cam shape">
       <svg viewBox="0 0 24 24" class="ico ico--sm"><rect x="4" y="4" width="16" height="16" rx="4"/></svg>
     </button>
   </div>
@@ -91,42 +91,42 @@
 <!-- ───────────────────────── Tool rail ───────────────────────── -->
 <aside class="rail" id="rail">
   <div class="rail__group" id="zoomGroup">
-    <button class="tool" data-tool="hand" title="Hand — drag to move the video (H)"><svg viewBox="0 0 24 24" class="ico"><path d="M7 11.5V5a1.5 1.5 0 0 1 3 0v5.5"/><path d="M10 10.5V4a1.5 1.5 0 0 1 3 0v6.5"/><path d="M13 10.5V5a1.5 1.5 0 0 1 3 0v7"/><path d="M16 12V8.5a1.5 1.5 0 0 1 3 0V15c0 3.9-2.6 6.5-6.5 6.5S6 18.9 6 15v-1.5l-1.8-2.7a1.3 1.3 0 0 1 2.1-1.5L7 11"/></svg></button>
-    <button class="tool" id="btnZoomIn" title="Zoom in (+)"><svg viewBox="0 0 24 24" class="ico"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.35-4.35M10.5 8v5M8 10.5h5"/></svg></button>
-    <button class="tool" id="btnZoomOut" title="Zoom out (-)"><svg viewBox="0 0 24 24" class="ico"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.35-4.35M8 10.5h5"/></svg></button>
-    <button class="tool" id="btnZoomReset" title="Reset zoom (0)"><svg viewBox="0 0 24 24" class="ico"><path d="M8 4H4v4M16 4h4v4M4 16v4h4M20 16v4h-4"/></svg></button>
-    <button class="tool" id="btnFlip" title="Flip video (F)"><svg viewBox="0 0 24 24" class="ico"><path d="M12 3v18" stroke-dasharray="2.5 2.5"/><path d="M8 7L4.5 12 8 17V7z" fill="currentColor" stroke="none"/><path d="M16 7l3.5 5-3.5 5V7z" fill="currentColor" stroke="none"/></svg></button>
+    <button class="tool" data-tool="hand" title="Hand — drag to move the video (H)" aria-label="Hand — drag to move the video"><svg viewBox="0 0 24 24" class="ico"><path d="M7 11.5V5a1.5 1.5 0 0 1 3 0v5.5"/><path d="M10 10.5V4a1.5 1.5 0 0 1 3 0v6.5"/><path d="M13 10.5V5a1.5 1.5 0 0 1 3 0v7"/><path d="M16 12V8.5a1.5 1.5 0 0 1 3 0V15c0 3.9-2.6 6.5-6.5 6.5S6 18.9 6 15v-1.5l-1.8-2.7a1.3 1.3 0 0 1 2.1-1.5L7 11"/></svg></button>
+    <button class="tool" id="btnZoomIn" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 24 24" class="ico"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.35-4.35M10.5 8v5M8 10.5h5"/></svg></button>
+    <button class="tool" id="btnZoomOut" title="Zoom out (-)" aria-label="Zoom out"><svg viewBox="0 0 24 24" class="ico"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.35-4.35M8 10.5h5"/></svg></button>
+    <button class="tool" id="btnZoomReset" title="Reset zoom (0)" aria-label="Reset zoom"><svg viewBox="0 0 24 24" class="ico"><path d="M8 4H4v4M16 4h4v4M4 16v4h4M20 16v4h-4"/></svg></button>
+    <button class="tool" id="btnFlip" title="Flip video (F)" aria-label="Flip video"><svg viewBox="0 0 24 24" class="ico"><path d="M12 3v18" stroke-dasharray="2.5 2.5"/><path d="M8 7L4.5 12 8 17V7z" fill="currentColor" stroke="none"/><path d="M16 7l3.5 5-3.5 5V7z" fill="currentColor" stroke="none"/></svg></button>
   </div>
 
   <div class="rail__divider"></div>
 
   <div class="rail__group" id="toolGroup">
-    <button class="tool is-active" data-tool="pen"    title="Freehand (P)"><svg viewBox="0 0 24 24" class="ico"><path d="M4 20l4-1 10-10a2.1 2.1 0 0 0-3-3L5 16z"/></svg></button>
-    <button class="tool" data-tool="line"   title="Line (L)"><svg viewBox="0 0 24 24" class="ico"><path d="M5 19L19 5"/></svg></button>
-    <button class="tool" data-tool="arrow"  title="Arrow (W)"><svg viewBox="0 0 24 24" class="ico"><path d="M5 19L18 6"/><path d="M18 6h-6.5M18 6v6.5"/></svg></button>
-    <button class="tool" data-tool="circle" title="Circle (O)"><svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="7.5"/></svg></button>
-    <button class="tool" data-tool="rect"   title="Box (B)"><svg viewBox="0 0 24 24" class="ico"><rect x="4.5" y="6" width="15" height="12" rx="1.5"/></svg></button>
-    <button class="tool" data-tool="angle"  title="Angle (A)"><svg viewBox="0 0 24 24" class="ico"><path d="M5 19h14M5 19L15 6"/></svg></button>
+    <button class="tool is-active" data-tool="pen"    title="Freehand (P)" aria-label="Freehand pen"><svg viewBox="0 0 24 24" class="ico"><path d="M4 20l4-1 10-10a2.1 2.1 0 0 0-3-3L5 16z"/></svg></button>
+    <button class="tool" data-tool="line"   title="Line (L)" aria-label="Line tool"><svg viewBox="0 0 24 24" class="ico"><path d="M5 19L19 5"/></svg></button>
+    <button class="tool" data-tool="arrow"  title="Arrow (W)" aria-label="Arrow tool"><svg viewBox="0 0 24 24" class="ico"><path d="M5 19L18 6"/><path d="M18 6h-6.5M18 6v6.5"/></svg></button>
+    <button class="tool" data-tool="circle" title="Circle (O)" aria-label="Circle tool"><svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="7.5"/></svg></button>
+    <button class="tool" data-tool="rect"   title="Box (B)" aria-label="Box tool"><svg viewBox="0 0 24 24" class="ico"><rect x="4.5" y="6" width="15" height="12" rx="1.5"/></svg></button>
+    <button class="tool" data-tool="angle"  title="Angle (A)" aria-label="Angle tool"><svg viewBox="0 0 24 24" class="ico"><path d="M5 19h14M5 19L15 6"/></svg></button>
   </div>
 
   <div class="rail__divider"></div>
 
   <div class="rail__group">
     <div class="dropdown" id="colorDropdown">
-      <button class="tool dd-trigger" id="colorTrigger" title="Colour">
+      <button class="tool dd-trigger" id="colorTrigger" title="Colour" aria-label="Choose drawing colour" aria-haspopup="true">
         <span class="dd-trigger__swatch" id="colorTriggerDot"></span>
       </button>
       <div class="dropdown__panel dropdown__panel--grid" id="colorPanel"></div>
     </div>
 
     <div class="dropdown" id="weightDropdown">
-      <button class="tool dd-trigger" id="weightTrigger" title="Line thickness">
+      <button class="tool dd-trigger" id="weightTrigger" title="Line thickness" aria-label="Choose line thickness" aria-haspopup="true">
         <span class="weight__dot" id="weightTriggerDot" style="height:5px"></span>
       </button>
       <div class="dropdown__panel" id="weightPanel">
-        <button class="weight" data-weight="0.6" title="Thin line"><span class="weight__dot" style="height:3px"></span></button>
-        <button class="weight is-active" data-weight="1" title="Medium line"><span class="weight__dot" style="height:5px"></span></button>
-        <button class="weight" data-weight="1.7" title="Thick line"><span class="weight__dot" style="height:8px"></span></button>
+        <button class="weight" data-weight="0.6" title="Thin line" aria-label="Thin line"><span class="weight__dot" style="height:3px"></span></button>
+        <button class="weight is-active" data-weight="1" title="Medium line" aria-label="Medium line"><span class="weight__dot" style="height:5px"></span></button>
+        <button class="weight" data-weight="1.7" title="Thick line" aria-label="Thick line"><span class="weight__dot" style="height:8px"></span></button>
       </div>
     </div>
   </div>
@@ -134,8 +134,8 @@
   <div class="rail__divider"></div>
 
   <div class="rail__group">
-    <button class="tool" id="btnUndo" title="Undo (U)"><svg viewBox="0 0 24 24" class="ico"><path d="M9 10H5V6"/><path d="M5.5 10.5A7 7 0 1 1 5 14"/></svg></button>
-    <button class="tool tool--danger" id="btnClear" title="Clear drawings (C)"><svg viewBox="0 0 24 24" class="ico"><path d="M6 7h12M9 7V5h6v2M8 7l1 12h6l1-12"/></svg></button>
+    <button class="tool" id="btnUndo" title="Undo (U)" aria-label="Undo last drawing"><svg viewBox="0 0 24 24" class="ico"><path d="M9 10H5V6"/><path d="M5.5 10.5A7 7 0 1 1 5 14"/></svg></button>
+    <button class="tool tool--danger" id="btnClear" title="Clear drawings (C)" aria-label="Clear all drawings"><svg viewBox="0 0 24 24" class="ico"><path d="M6 7h12M9 7V5h6v2M8 7l1 12h6l1-12"/></svg></button>
   </div>
 </aside>
 
@@ -152,16 +152,16 @@
   </div>
 
   <div class="transport">
-    <button class="tbtn" id="btnStepBack" title="Previous frame (←)">
+    <button class="tbtn" id="btnStepBack" title="Previous frame (←)" aria-label="Previous frame">
       <svg viewBox="0 0 24 24" class="ico"><path d="M15 5L8 12l7 7M6 5v14"/></svg>
     </button>
 
-    <button class="tbtn tbtn--primary" id="btnPlay" title="Play / pause (Space)">
+    <button class="tbtn tbtn--primary" id="btnPlay" title="Play / pause (Space)" aria-label="Play or pause">
       <svg viewBox="0 0 24 24" class="ico ico--fill" id="icoPlay"><path d="M8 5.5l11 6.5-11 6.5z"/></svg>
       <svg viewBox="0 0 24 24" class="ico ico--fill hidden" id="icoPause"><path d="M8 5h3.2v14H8zM12.8 5H16v14h-3.2z"/></svg>
     </button>
 
-    <button class="tbtn" id="btnStepFwd" title="Next frame (→)">
+    <button class="tbtn" id="btnStepFwd" title="Next frame (→)" aria-label="Next frame">
       <svg viewBox="0 0 24 24" class="ico"><path d="M9 5l7 7-7 7M18 5v14"/></svg>
     </button>
 
