@@ -49,7 +49,10 @@ class Deck {
     this.file   = $('.deck__file', this.el);
     this.nameEl = $('.deck__name', this.el);
     this.empty  = $('.deck__empty', this.el);
-    this.empty.addEventListener('click', () => this.file.click());
+    /* opens the full Load sheet (file picker, pro models, incoming
+       library) rather than jumping straight to the OS file picker, so
+       the pro reference models are reachable from here too */
+    this.empty.addEventListener('click', () => openSheet());
     this.buildScrub();
 
     this.strokes = [];

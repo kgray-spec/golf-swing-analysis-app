@@ -100,11 +100,11 @@ positioned live.
 video out into a floating system window, so you can keep a swing on screen while
 you're in another app.
 
-**Loading video**: click directly on an empty pane ("Add swing A/B") to open
-the file picker for that slot, the **+** button for the full load sheet (also
-lists incoming ClickUp swings and lets you swap A/B), or drag a file straight
-onto a pane on desktop. On iPhone/iPad the file picker also offers *Take Video*,
-so you can film a swing and analyse it without leaving the app.
+**Loading video**: click directly on an empty pane ("Add swing A/B"), or the
+**+** button, to open the load sheet — file picker, pro reference models, and
+the incoming-swings library, all in one place. You can also drag a file
+straight onto a pane on desktop. On iPhone/iPad the file picker also offers
+*Take Video*, so you can film a swing and analyse it without leaving the app.
 
 **Pro reference models**: the Load sheet always offers a face-on and a
 down-the-line professional swing (`assets/pro-models/`) — tap **A** or **B**
