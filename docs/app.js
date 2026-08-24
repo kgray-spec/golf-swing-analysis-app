@@ -1220,14 +1220,19 @@ async function loadLibrary() {
    own swing can be dropped alongside for comparison — static files, not
    part of the incoming-swings library, so no server round trip needed. */
 const PRO_MODELS = [
-  { file: 'assets/pro-models/face-on.mp4',       name: 'Professional swing', angle: 'face on' },
-  { file: 'assets/pro-models/down-the-line.mp4', name: 'Professional swing', angle: 'down the line' },
+  { file: 'assets/pro-models/face-on.mp4',       thumb: 'assets/pro-models/face-on.jpg',       name: 'Professional swing', angle: 'face on' },
+  { file: 'assets/pro-models/down-the-line.mp4', thumb: 'assets/pro-models/down-the-line.jpg', name: 'Professional swing', angle: 'down the line' },
 ];
 (() => {
   const proList = $('#proList');
   for (const it of PRO_MODELS) {
     const row = document.createElement('div');
     row.className = 'lib__item';
+
+    const thumb = document.createElement('img');
+    thumb.className = 'lib__thumb';
+    thumb.src = it.thumb;
+    thumb.alt = '';
 
     const meta = document.createElement('div');
     meta.className = 'lib__meta';
@@ -1255,7 +1260,7 @@ const PRO_MODELS = [
       pick.appendChild(b);
     }
 
-    row.append(meta, pick);
+    row.append(thumb, meta, pick);
     proList.appendChild(row);
   }
 })();

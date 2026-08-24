@@ -468,6 +468,18 @@ body.sheet-open .sheet{ transform:translate(-50%, 0); }
 @media (min-width:560px){
   .sheet{ bottom:16px; border-radius:var(--r-xl); transform:translate(-50%, calc(100% + 24px)); }
 }
+/* Enough room to float free of the edges: centre it like a dialog
+   instead of anchoring to the bottom, which just strands it under a
+   wall of empty space on a wide desktop window. */
+@media (min-width:820px) and (min-height:640px){
+  .sheet{
+    top:50%; bottom:auto;
+    transform:translate(-50%, -50%) scale(.96);
+    max-height:min(680px, 84vh); overflow-y:auto;
+  }
+  body.sheet-open .sheet{ transform:translate(-50%, -50%) scale(1); }
+  .sheet__grab{ display:none; }
+}
 .sheet__grab{ width:36px; height:5px; border-radius:3px; background:rgba(255,255,255,.28); margin:2px auto 12px; }
 .sheet__title{ margin:0 0 10px; padding:0 8px; font-size:17px; font-weight:700; letter-spacing:-.02em; }
 
@@ -567,6 +579,11 @@ body.sheet-open .sheet{ transform:translate(-50%, 0); }
   display:flex; align-items:center; gap:10px;
   padding:9px 8px 9px 12px; margin-bottom:5px; border-radius:var(--r-md);
   background:rgba(255,255,255,.055);
+}
+.lib__thumb{
+  width:56px; height:42px; border-radius:8px; flex:0 0 auto;
+  object-fit:cover; background:rgba(255,255,255,.06);
+  box-shadow:inset 0 0 0 .5px var(--hairline);
 }
 .lib__meta{ min-width:0; flex:1 1 auto; }
 .lib__name{ font-size:14px; font-weight:600; letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
