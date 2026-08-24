@@ -317,7 +317,10 @@ function paintStroke(c, s, r) {
   } else if (s.tool === 'arrow') {
     const [x0, y0] = P(pts[0]), [x1, y1] = P(pts[1]);
     const ang = Math.atan2(y1 - y0, x1 - x0);
-    const headLen = Math.max(lw * 5, r.h * 0.045);
+    /* scaled off lw (which already folds in weight) so thin/medium/thick
+       actually produce different-sized heads — a flat r.h-relative floor
+       here previously swamped the weight term for anything but thick */
+    const headLen = Math.max(lw * 6.5, 10);
     const spread = Math.PI / 7;
     const wingL = [x1 - headLen * Math.cos(ang - spread), y1 - headLen * Math.sin(ang - spread)];
     const wingR = [x1 - headLen * Math.cos(ang + spread), y1 - headLen * Math.sin(ang + spread)];
