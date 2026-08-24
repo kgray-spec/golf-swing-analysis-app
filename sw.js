@@ -1,5 +1,5 @@
 /* Offline shell. Bump CACHE when you change app files. */
-const CACHE = 'swing-v4';
+const CACHE = 'swing-v5';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.json', './assets/icon.svg'];
 
 self.addEventListener('install', e => {

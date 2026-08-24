@@ -1212,6 +1212,51 @@ async function loadLibrary() {
   }
 }
 
+/* ---------- pro reference models ----------
+   Fixed pair of professional swings (face-on / down-the-line) a student's
+   own swing can be dropped alongside for comparison — static files, not
+   part of the incoming-swings library, so no server round trip needed. */
+const PRO_MODELS = [
+  { file: 'assets/pro-models/face-on.mp4',       name: 'Professional swing', angle: 'face on' },
+  { file: 'assets/pro-models/down-the-line.mp4', name: 'Professional swing', angle: 'down the line' },
+];
+(() => {
+  const proList = $('#proList');
+  for (const it of PRO_MODELS) {
+    const row = document.createElement('div');
+    row.className = 'lib__item';
+
+    const meta = document.createElement('div');
+    meta.className = 'lib__meta';
+    const name = document.createElement('div');
+    name.className = 'lib__name';
+    name.textContent = it.name;
+    const sub = document.createElement('div');
+    sub.className = 'lib__sub';
+    sub.textContent = it.angle;
+    meta.append(name, sub);
+
+    const pick = document.createElement('div');
+    pick.className = 'lib__pick';
+    for (const id of ['A', 'B']) {
+      const b = document.createElement('button');
+      b.className = `lib__btn lib__btn--${id.toLowerCase()}`;
+      b.textContent = id;
+      b.title = `Load into ${id}`;
+      b.addEventListener('click', () => {
+        const deck = id === 'A' ? A : B;
+        deck.loadUrl(it.file, `${it.name} — ${it.angle}`);
+        if (id === 'B' && state.layout === 'single') setLayout('split');
+        closeSheet();
+      });
+      pick.appendChild(b);
+    }
+
+    row.append(meta, pick);
+    proList.appendChild(row);
+  }
+})();
+
 /* Sync now: kick the ClickUp pull, then poll until it settles. */
 $('#libSync').addEventListener('click', async () => {
   libStatus.textContent = 'Checking ClickUp…';

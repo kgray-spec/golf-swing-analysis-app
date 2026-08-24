@@ -106,6 +106,11 @@ lists incoming ClickUp swings and lets you swap A/B), or drag a file straight
 onto a pane on desktop. On iPhone/iPad the file picker also offers *Take Video*,
 so you can film a swing and analyse it without leaving the app.
 
+**Pro reference models**: the Load sheet always offers a face-on and a
+down-the-line professional swing (`assets/pro-models/`) — tap **A** or **B**
+to drop one in alongside a student's swing for comparison. Swap the two
+files to change which clips these are.
+
 **Incoming swings**: the Load sheet also lists everything sitting in `Library/`,
 newest first, with the student's name and camera angle. Tap **A** or **B** to
 drop a clip straight into that pane. See below for filling it automatically.
@@ -235,7 +240,7 @@ server.js          dependency-free static server + swing-library API + daily Cli
 sync-swings.js     pulls swing videos out of ClickUp into Library/
 sw.js              offline cache (bump CACHE after editing app files)
 manifest.json      PWA install metadata
-assets/            app icon
+assets/            app icon, pro reference model videos (assets/pro-models/)
 Library/           incoming swing videos (gitignored, except README.txt)
 ```
 
