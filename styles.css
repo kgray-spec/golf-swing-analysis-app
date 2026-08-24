@@ -475,9 +475,15 @@ body.sheet-open .sheet{ transform:translate(-50%, 0); }
   .sheet{
     top:50%; bottom:auto;
     transform:translate(-50%, -50%) scale(.96);
+    /* unlike the bottom-sheet variants, staying centred means the
+       transform alone never moves this off-screen when closed — it
+       has to be hidden explicitly, or "closed" still sits there fully
+       visible and clickable */
+    opacity:0; pointer-events:none;
     max-height:min(680px, 84vh); overflow-y:auto;
+    transition:transform var(--med), opacity var(--med);
   }
-  body.sheet-open .sheet{ transform:translate(-50%, -50%) scale(1); }
+  body.sheet-open .sheet{ transform:translate(-50%, -50%) scale(1); opacity:1; pointer-events:auto; }
   .sheet__grab{ display:none; }
 }
 .sheet__grab{ width:36px; height:5px; border-radius:3px; background:rgba(255,255,255,.28); margin:2px auto 12px; }
