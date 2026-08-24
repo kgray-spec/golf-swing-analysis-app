@@ -316,15 +316,21 @@ function paintStroke(c, s, r) {
 
   } else if (s.tool === 'arrow') {
     const [x0, y0] = P(pts[0]), [x1, y1] = P(pts[1]);
-    c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
-
     const ang = Math.atan2(y1 - y0, x1 - x0);
-    const headLen = Math.max(lw * 4.2, r.h * 0.035);
-    const spread = Math.PI / 7.5;
+    const headLen = Math.max(lw * 5, r.h * 0.045);
+    const spread = Math.PI / 7;
+    const wingL = [x1 - headLen * Math.cos(ang - spread), y1 - headLen * Math.sin(ang - spread)];
+    const wingR = [x1 - headLen * Math.cos(ang + spread), y1 - headLen * Math.sin(ang + spread)];
+    const baseMid = [(wingL[0] + wingR[0]) / 2, (wingL[1] + wingR[1]) / 2];
+
+    /* stop the shaft at the head's base, not the tip — otherwise the
+       round line-cap sits centred on the point and blunts it */
+    c.moveTo(x0, y0); c.lineTo(baseMid[0], baseMid[1]); c.stroke();
+
     c.beginPath();
     c.moveTo(x1, y1);
-    c.lineTo(x1 - headLen * Math.cos(ang - spread), y1 - headLen * Math.sin(ang - spread));
-    c.lineTo(x1 - headLen * Math.cos(ang + spread), y1 - headLen * Math.sin(ang + spread));
+    c.lineTo(wingL[0], wingL[1]);
+    c.lineTo(wingR[0], wingR[1]);
     c.closePath();
     c.fill();
 
@@ -1277,28 +1283,42 @@ function setWeight(w) {
 $$('#weightPanel .weight').forEach(b => b.addEventListener('click', () => { setWeight(+b.dataset.weight); closeDropdowns(); }));
 setWeight(state.weight);
 
-/* ---------- rail dropdowns (colour / thickness) ---------- */
-function closeDropdowns(except) {
-  $$('.dropdown.is-open').forEach(d => { if (d !== except) d.classList.remove('is-open'); });
+/* ---------- rail dropdowns (colour / thickness) ----------
+   The panels are detached from the rail into a body-level layer.
+   `.rail` has its own backdrop-filter, which — like `transform` —
+   establishes a containing block for position:fixed descendants;
+   combined with the rail's overflow-y:auto, a panel left nested
+   inside it gets silently clipped to the rail's own ~60px width no
+   matter what left/top coordinates are set on it. Moving it out from
+   under that ancestor is what actually lets it float free. */
+const dropdownLayer = document.createElement('div');
+dropdownLayer.id = 'dropdownLayer';
+document.body.appendChild(dropdownLayer);
+$$('.dropdown__panel').forEach(p => dropdownLayer.appendChild(p));
+
+function closeDropdowns() {
+  $$('.dropdown__panel.is-open').forEach(p => p.classList.remove('is-open'));
 }
-function toggleDropdown(el) {
-  const wasOpen = el.classList.contains('is-open');
+function openDropdown(trigger, panel) {
+  const wasOpen = panel.classList.contains('is-open');
   closeDropdowns();
-  if (!wasOpen) {
-    /* position:fixed panel — compute screen coords from the trigger now,
-       since the panel escapes the rail's own layout (see CSS comment) */
-    const trigger = $('.dd-trigger', el);
-    const panel = $('.dropdown__panel', el);
-    const r = trigger.getBoundingClientRect();
-    panel.style.left = (r.right + 10) + 'px';
-    panel.style.top  = (r.top + r.height / 2) + 'px';
-    el.classList.add('is-open');
-  }
+  if (wasOpen) return;
+  /* clamped to the viewport: on short screens the colour/weight
+     triggers sit near the bottom of the rail, and an unclamped
+     centre-on-trigger placement pushed the panel off-screen */
+  const r = trigger.getBoundingClientRect();
+  const margin = 8;
+  const panelH = panel.offsetHeight, panelW = panel.offsetWidth;
+  const top  = clamp(r.top + r.height / 2, panelH / 2 + margin, innerHeight - panelH / 2 - margin);
+  const left = clamp(r.right + 10, margin, innerWidth - panelW - margin);
+  panel.style.left = left + 'px';
+  panel.style.top  = top + 'px';
+  panel.classList.add('is-open');
 }
-$('#colorTrigger').addEventListener('click', () => toggleDropdown($('#colorDropdown')));
-$('#weightTrigger').addEventListener('click', () => toggleDropdown($('#weightDropdown')));
+$('#colorTrigger').addEventListener('click', () => openDropdown($('#colorTrigger'), $('#colorPanel')));
+$('#weightTrigger').addEventListener('click', () => openDropdown($('#weightTrigger'), $('#weightPanel')));
 document.addEventListener('pointerdown', e => {
-  if (!e.target.closest('.dropdown')) closeDropdowns();
+  if (!e.target.closest('.dropdown') && !e.target.closest('#dropdownLayer')) closeDropdowns();
 }, true);
 
 /* ---------- keyboard ---------- */

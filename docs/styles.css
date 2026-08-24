@@ -370,7 +370,7 @@ body.is-recording .rec-badge{ display:flex; }
 .dropdown__panel--grid{
   display:grid; grid-template-columns:repeat(2, auto); gap:8px;
 }
-.dropdown.is-open .dropdown__panel{
+.dropdown__panel.is-open{
   opacity:1; pointer-events:auto; transform:translateY(-50%) scale(1);
 }
 
