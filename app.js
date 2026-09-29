@@ -1422,6 +1422,10 @@ function openDropdown(trigger, panel) {
   closeDropdowns();
   if (wasOpen) return;
   trigger.classList.add('is-active');
+  placePanel(trigger, panel);
+  panel.classList.add('is-open');
+}
+function placePanel(trigger, panel) {
   /* clamped to the viewport: on short screens the colour/weight
      triggers sit near the bottom of the rail, and an unclamped
      centre-on-trigger placement pushed the panel off-screen */
@@ -1438,7 +1442,6 @@ function openDropdown(trigger, panel) {
     : clamp(r.right + 10, margin, innerWidth - panelW - margin);
   panel.style.left = left + 'px';
   panel.style.top  = top + 'px';
-  panel.classList.add('is-open');
 }
 $('#colorTrigger').addEventListener('click', () => openDropdown($('#colorTrigger'), $('#colorPanel')));
 $('#weightTrigger').addEventListener('click', () => openDropdown($('#weightTrigger'), $('#weightPanel')));
@@ -1448,15 +1451,17 @@ $('#weightTrigger').addEventListener('click', () => openDropdown($('#weightTrigg
    the first open asks for it (and immediately releases the device). */
 async function buildDevicePicker(panel, { kind, title, pref, onPick }) {
   const list = async () => (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === kind);
-  let devs = [];
+  let devs = [], denied = false;
   try {
     devs = await list();
-    if (devs.length && !devs[0].label) {
+    /* Chrome lists devices with blank names before permission; Safari
+       lists none at all — either way, ask once, then list again */
+    if (!devs.length || !devs[0].label) {
       const tmp = await navigator.mediaDevices.getUserMedia(kind === 'audioinput' ? { audio: true } : { video: true });
       tmp.getTracks().forEach(t => t.stop());
       devs = await list();
     }
-  } catch { devs = []; }
+  } catch (err) { devs = []; denied = err && err.name === 'NotAllowedError'; }
 
   panel.textContent = '';
   const head = document.createElement('div');
@@ -1465,7 +1470,10 @@ async function buildDevicePicker(panel, { kind, title, pref, onPick }) {
   if (!devs.length) {
     const p = document.createElement('div');
     p.className = 'mic-empty';
-    p.textContent = `No ${kind === 'audioinput' ? 'microphone' : 'camera'} found — check permission`;
+    const what = kind === 'audioinput' ? 'microphone' : 'camera';
+    p.textContent = denied
+      ? `${what[0].toUpperCase() + what.slice(1)} access is blocked — allow it in your browser's site settings`
+      : `No ${what} found`;
     panel.appendChild(p);
     return;
   }
@@ -1488,6 +1496,8 @@ const micPanel = $('#micPanel'), camPanel = $('#camPanel');
 $('#micTrigger').addEventListener('click', async () => {
   if (micPanel.classList.contains('is-open')) { closeDropdowns(); return; }
   if (document.body.classList.contains('is-recording')) { toast('Stop recording to change the mic'); return; }
+  micPanel.innerHTML = '<div class="mic-empty">Finding microphones…</div>';
+  openDropdown($('#micTrigger'), micPanel);
   await buildDevicePicker(micPanel, {
     kind: 'audioinput', title: 'Record audio from', pref: 'micId',
     onPick: name => {
@@ -1495,10 +1505,12 @@ $('#micTrigger').addEventListener('click', async () => {
       toast(`Mic: ${name}`);
     },
   });
-  openDropdown($('#micTrigger'), micPanel);
+  if (micPanel.classList.contains('is-open')) placePanel($('#micTrigger'), micPanel);
 });
 $('#camTrigger').addEventListener('click', async () => {
   if (camPanel.classList.contains('is-open')) { closeDropdowns(); return; }
+  camPanel.innerHTML = '<div class="mic-empty">Finding cameras…</div>';
+  openDropdown($('#camTrigger'), camPanel);
   await buildDevicePicker(camPanel, {
     kind: 'videoinput', title: 'Face-cam from', pref: 'camId',
     onPick: async name => {
@@ -1508,7 +1520,7 @@ $('#camTrigger').addEventListener('click', async () => {
       toast(`Camera: ${name}`);
     },
   });
-  openDropdown($('#camTrigger'), camPanel);
+  if (camPanel.classList.contains('is-open')) placePanel($('#camTrigger'), camPanel);
 });
 document.addEventListener('pointerdown', e => {
   if (!e.target.closest('.dropdown') && !e.target.closest('#dropdownLayer')) closeDropdowns();
