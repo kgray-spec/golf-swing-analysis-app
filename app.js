@@ -30,7 +30,7 @@ const ZOOM_MIN = 1, ZOOM_MAX = 6;
 
 /* ---------- persisted prefs ---------- */
 const prefs = Object.assign(
-  { fps: 30, mic: true, color: '#39ff14', tool: 'pen', speed: 1, layout: 'single', weight: 1, webcamShape: 'circle' },
+  { fps: 30, mic: true, color: '#39ff14', tool: 'pen', speed: 1, layout: 'single', weight: 1, webcamShape: 'circle', recFormat: 'landscape', recQuality: 'sd', watermark: true },
   JSON.parse(localStorage.getItem('swing.prefs') || '{}')
 );
 const savePrefs = () => localStorage.setItem('swing.prefs', JSON.stringify(prefs));
@@ -739,10 +739,18 @@ function updateScrubVisibility() {
    ============================================================ */
 const rec = { mr: null, chunks: [], raf: 0, t0: 0, stream: null, mic: null, meter: null, peak: 0 };
 
-function recSize() {
-  const w = stage.clientWidth || 1280, h = stage.clientHeight || 720;
-  const scale = Math.min(1, 1280 / Math.max(w, h));
-  return { w: Math.round(w * scale / 2) * 2, h: Math.round(h * scale / 2) * 2 };
+/* Output canvas size for the chosen format/quality. Landscape keeps the
+   stage's own shape; vertical/square are fixed social sizes. */
+function exportSize() {
+  const long = prefs.recQuality === 'hd' ? 1920 : 1280;
+  let w, h;
+  if (prefs.recFormat === 'vertical')    { w = long * 9 / 16; h = long; }
+  else if (prefs.recFormat === 'square') { w = h = long * 9 / 16; }
+  else {
+    const sw = stage.clientWidth || 1280, sh = stage.clientHeight || 720, k = long / Math.max(sw, sh);
+    w = sw * k; h = sh * k;
+  }
+  return { w: Math.round(w / 2) * 2, h: Math.round(h / 2) * 2 };
 }
 
 /* Webcam bubble geometry — shared by the live DOM overlay (applyWebcam,
@@ -787,7 +795,7 @@ function drawWebcam(c, W, H) {
   c.restore();
 }
 
-function composite(c, W, H) {
+function composite(c, W, H, withCam = true) {
   c.save();
   c.globalCompositeOperation = 'source-over';
   c.globalAlpha = 1;
@@ -826,18 +834,98 @@ function composite(c, W, H) {
   }
   c.restore();
 
+  if (withCam) drawWebcam(c, W, H);
+}
+
+/* ---------- social formats ----------
+   Vertical/square can't just stretch the stage, so each piece is rendered
+   at its own on-screen shape and fitted into the frame, over a blurred,
+   darkened copy of itself (the usual Reels/TikTok look, no black bars). */
+const offA = document.createElement('canvas'), offB = document.createElement('canvas'),
+      offStage = document.createElement('canvas'), offBlur = document.createElement('canvas');
+
+function deckFrame(deck, off) {
+  const ew = deck.el.clientWidth || 16, eh = deck.el.clientHeight || 9;
+  /* unzoomed: crop to the video itself so its letterboxing doesn't come along */
+  const r = deck.zoom > 1.001 ? { x: 0, y: 0, w: ew, h: eh } : deck.contentRect(ew, eh);
+  const k = Math.min(3, 1920 / Math.max(r.w, r.h, 1));
+  off.width = Math.max(2, Math.round(r.w * k)); off.height = Math.max(2, Math.round(r.h * k));
+  const oc = off.getContext('2d');
+  oc.fillStyle = '#050505'; oc.fillRect(0, 0, off.width, off.height);
+  drawZoomedDeck(oc, deck, -r.x * k, -r.y * k, ew * k, eh * k);
+  return off;
+}
+
+function fitInto(c, img, x, y, w, h) {
+  const iw = img.width, ih = img.height;
+  if (!iw || !ih) return;
+  c.save();
+  c.beginPath(); c.rect(x, y, w, h); c.clip();
+  /* cheap blur: shrink to a few dozen px, then scale back up smoothly */
+  offBlur.width = 36; offBlur.height = Math.max(2, Math.round(36 * h / w));
+  const bc = offBlur.getContext('2d'), cs = Math.max(offBlur.width / iw, offBlur.height / ih);
+  bc.drawImage(img, (offBlur.width - iw * cs) / 2, (offBlur.height - ih * cs) / 2, iw * cs, ih * cs);
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(offBlur, x, y, w, h);
+  c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(x, y, w, h);
+  const s = Math.min(w / iw, h / ih);
+  c.drawImage(img, x + (w - iw * s) / 2, y + (h - ih * s) / 2, iw * s, ih * s);
+  c.restore();
+}
+
+function composeSocial(c, W, H) {
+  c.fillStyle = '#050505'; c.fillRect(0, 0, W, H);
+  const L = state.layout;
+  if (L === 'split' && A.loaded && B.loaded) {
+    if (H > W) { fitInto(c, deckFrame(A, offA), 0, 0, W, H / 2); fitInto(c, deckFrame(B, offB), 0, H / 2, W, H / 2); }
+    else       { fitInto(c, deckFrame(A, offA), 0, 0, W / 2, H); fitInto(c, deckFrame(B, offB), W / 2, 0, W / 2, H); }
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    if (H > W) c.fillRect(0, H / 2 - 1, W, 2); else c.fillRect(W / 2 - 1, 0, 2, H);
+  } else if (L === 'single' || !B.loaded) {
+    fitInto(c, deckFrame(A, offA), 0, 0, W, H);
+  } else {
+    /* PiP / Ghost: keep the on-screen arrangement exactly, then fit it */
+    const sw = stage.clientWidth || 16, sh = stage.clientHeight || 9, k = Math.min(2, 1920 / Math.max(sw, sh));
+    offStage.width = Math.round(sw * k); offStage.height = Math.round(sh * k);
+    composite(offStage.getContext('2d'), offStage.width, offStage.height, false);
+    fitInto(c, offStage, 0, 0, W, H);
+  }
   drawWebcam(c, W, H);
+}
+
+function drawWatermark(c, W, H) {
+  const fs = Math.round(Math.max(14, Math.min(W, H) * 0.03));
+  c.save();
+  c.font = `600 ${fs}px -apple-system, "SF Pro Text", system-ui, sans-serif`;
+  c.shadowColor = 'rgba(0,0,0,.65)'; c.shadowBlur = fs * .5;
+  c.fillStyle = 'rgba(255,255,255,.85)';
+  if (H > W) {
+    /* vertical: top-centre — the bottom and right edge sit under the
+       Reels/TikTok caption and button overlays */
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    c.fillText('www.perform.golf', W / 2, H * 0.085);
+  } else {
+    c.textAlign = 'right'; c.textBaseline = 'bottom';
+    c.fillText('www.perform.golf', W - fs * 1.1, H - fs * 1.1);
+  }
+  c.restore();
+}
+
+function renderExport(c, W, H) {
+  if (prefs.recFormat === 'vertical' || prefs.recFormat === 'square') composeSocial(c, W, H);
+  else composite(c, W, H);
+  if (prefs.watermark) drawWatermark(c, W, H);
 }
 
 async function startRecording() {
   if (!A.loaded) { openSheet(); return; }
 
-  const { w, h } = recSize();
+  const { w, h } = exportSize();
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const c = cv.getContext('2d', { alpha: false });
 
-  const loop = () => { composite(c, w, h); updateMeter(); rec.raf = requestAnimationFrame(loop); };
+  const loop = () => { renderExport(c, w, h); updateMeter(); rec.raf = requestAnimationFrame(loop); };
   loop();
 
   const stream = cv.captureStream(30);
@@ -876,7 +964,7 @@ async function startRecording() {
   /* Compressed at capture: ~0.08 bits per pixel per frame is plenty for
      mostly-static lesson footage (≈2.2 Mbps at 720p), about a third of
      the old fixed 6 Mbps — much smaller files with no visible loss. */
-  const vbr = clamp(Math.round(w * h * 30 * 0.08), 1_200_000, 3_500_000);
+  const vbr = clamp(Math.round(w * h * 30 * 0.08), 1_200_000, 6_000_000);
   rec.mr = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: vbr, audioBitsPerSecond: 128_000 });
   rec.mr.ondataavailable = e => { if (e.data.size) rec.chunks.push(e.data); };
   rec.mr.onstop = () => finishRecording(mime);
@@ -1491,6 +1579,36 @@ async function buildDevicePicker(panel, { kind, title, pref, onPick }) {
     panel.appendChild(b);
   }
 }
+
+/* ---------- export format / quality / watermark ---------- */
+const exportPanel = $('#exportPanel');
+function syncExportUI() {
+  $$('#exportPanel [data-fmt]').forEach(b => b.classList.toggle('is-active', b.dataset.fmt === prefs.recFormat));
+  $$('#exportPanel [data-q]').forEach(b => b.classList.toggle('is-active', b.dataset.q === prefs.recQuality));
+  $('#wmToggle').classList.toggle('is-active', !!prefs.watermark);
+  $('#wmToggle').textContent = prefs.watermark ? 'www.perform.golf — on' : 'www.perform.golf — off';
+  const f = { landscape: 'Screen', vertical: '9:16', square: '1:1' }[prefs.recFormat] || 'Screen';
+  $('#exportLabel').textContent = `${f} · ${prefs.recQuality === 'hd' ? '1080p' : '720p'}`;
+  document.body.classList.toggle('wm-on', !!prefs.watermark);
+}
+const lockedWhileRecording = () => {
+  if (!document.body.classList.contains('is-recording')) return false;
+  toast('Stop recording to change the format'); return true;
+};
+$$('#exportPanel [data-fmt]').forEach(b => b.addEventListener('click', () => {
+  if (lockedWhileRecording()) return;
+  prefs.recFormat = b.dataset.fmt; savePrefs(); syncExportUI();
+}));
+$$('#exportPanel [data-q]').forEach(b => b.addEventListener('click', () => {
+  if (lockedWhileRecording()) return;
+  prefs.recQuality = b.dataset.q; savePrefs(); syncExportUI();
+}));
+$('#wmToggle').addEventListener('click', () => {
+  if (lockedWhileRecording()) return;
+  prefs.watermark = !prefs.watermark; savePrefs(); syncExportUI();
+});
+$('#exportTrigger').addEventListener('click', () => openDropdown($('#exportTrigger'), exportPanel));
+syncExportUI();
 
 const micPanel = $('#micPanel'), camPanel = $('#camPanel');
 $('#micTrigger').addEventListener('click', async () => {

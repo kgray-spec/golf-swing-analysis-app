@@ -78,6 +78,8 @@
     <button class="chip chip--sm" id="blendToggle" data-blend="normal">Blend</button>
   </div>
 
+  <div class="wm-preview" aria-hidden="true">www.perform.golf</div>
+
   <div class="rec-badge" id="recBadge"><span class="rec-dot rec-dot--live"></span><span id="recTime">0:00</span><span class="rec-mic" id="recMic" title="Recording audio"><svg viewBox="0 0 24 24" class="ico ico--sm"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></div>
 
   <div class="webcam" id="webcamBubble" data-shape="circle" hidden>
@@ -198,6 +200,24 @@
         <svg viewBox="0 0 24 24" class="ico ico--sm"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="dropdown__panel" id="camPanel"></div>
+    </div>
+
+    <div class="dropdown" id="exportDropdown">
+      <button class="chip chip--wide" id="exportTrigger" title="Recording format" aria-label="Recording format, quality and watermark" aria-haspopup="true">
+        <svg viewBox="0 0 24 24" class="ico ico--sm"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>
+        <span id="exportLabel">Screen · 720p</span>
+      </button>
+      <div class="dropdown__panel" id="exportPanel">
+        <div class="mic-head">Format</div>
+        <button class="mic-opt" data-fmt="landscape">Landscape — as on screen</button>
+        <button class="mic-opt" data-fmt="vertical">Vertical 9:16 — Reels, TikTok, Shorts</button>
+        <button class="mic-opt" data-fmt="square">Square 1:1 — Instagram feed</button>
+        <div class="mic-head">Quality</div>
+        <button class="mic-opt" data-q="sd">720p — smaller file for students</button>
+        <button class="mic-opt" data-q="hd">1080p — best for social</button>
+        <div class="mic-head">Watermark</div>
+        <button class="mic-opt" id="wmToggle">www.perform.golf</button>
+      </div>
     </div>
 
     <button class="btn btn--rec" id="btnRecord" title="Record lesson">

@@ -447,8 +447,8 @@ body.is-recording .rec-badge{ display:flex; }
 /* mic source picker: small caret hugging the Mic chip */
 .chip--caret{ width:26px; padding:0; margin-left:-4px; justify-content:center; background:rgba(255,255,255,.09); }
 .chip--caret.is-active{ background:rgba(255,255,255,.2); }
-#micDropdown, #camDropdown{ display:flex; }
-#micPanel, #camPanel{ min-width:220px; max-width:300px; gap:4px; }
+#micDropdown, #camDropdown, #exportDropdown{ display:flex; }
+#micPanel, #camPanel, #exportPanel{ min-width:220px; max-width:300px; gap:4px; }
 .mic-head{ font-size:11.5px; font-weight:600; color:var(--text-faint); padding:2px 8px 4px; }
 .mic-empty{ font-size:13px; color:var(--text-dim); padding:6px 8px; }
 .mic-opt{
@@ -633,3 +633,14 @@ body.sheet-open .sheet{ transform:translate(-50%, 0); }
 .lib__btn--b{ background:#ff9f0a; }
 .lib__btn:hover{ filter:brightness(1.15); }
 .lib__status{ margin:0 0 8px; padding:0 5px; font-size:11.5px; font-weight:500; color:var(--text-faint); }
+
+/* export panel: section headers need a little air after the first */
+#exportPanel .mic-head:not(:first-child){ margin-top:6px; }
+
+/* on-stage preview of the recording watermark */
+.wm-preview{
+  position:absolute; z-index:9; right:14px; bottom:12px; pointer-events:none;
+  font-size:13px; font-weight:600; color:rgba(255,255,255,.8);
+  text-shadow:0 1px 6px rgba(0,0,0,.7); display:none;
+}
+body.wm-on .wm-preview{ display:block; }

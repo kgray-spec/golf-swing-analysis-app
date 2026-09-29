@@ -95,6 +95,15 @@ message confirms the file size and whether audio was actually captured. Files
 are compressed as they record (720p-class resolution, ~2 Mbps), roughly a third
 the size of before with no visible quality loss.
 
+**Format / quality / watermark** (the chip just left of **Record**, shows e.g.
+"9:16 · 1080p"): record *Landscape* (exactly as on screen), *Vertical 9:16*
+for Reels/TikTok/Shorts, or *Square 1:1* for the Instagram feed. Vertical and
+square re-lay the picture rather than cropping it — Split stacks A over B, and
+anything that doesn't fill the frame sits on a blurred copy of itself instead of
+black bars. Pick 720p (small files for students) or 1080p (social). The
+`www.perform.golf` watermark is on by default (top-centre on vertical, so the
+app buttons don't cover it; bottom-right otherwise) and previews on screen.
+
 **Face** button (bottom transport, next to Mic): shows a small circular or
 square bubble of your webcam, so a student can see you while you talk through
 their swing. Drag it anywhere on screen; tap it to blow it up full-size for a
