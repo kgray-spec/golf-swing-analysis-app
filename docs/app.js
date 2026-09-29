@@ -996,10 +996,17 @@ function applyWebcam() {
 async function toggleWebcam() {
   if (state.webcam.on) { stopWebcam(); return; }
   try {
-    webcamStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    });
+    const base = { width: { ideal: 1280 }, height: { ideal: 720 } };
+    try {
+      webcamStream = await navigator.mediaDevices.getUserMedia({
+        video: prefs.camId ? { ...base, deviceId: { exact: prefs.camId } } : { ...base, facingMode: 'user' },
+        audio: false,
+      });
+    } catch (err) {
+      if (!prefs.camId) throw err;
+      /* chosen camera unplugged since last time — use the default */
+      webcamStream = await navigator.mediaDevices.getUserMedia({ video: { ...base, facingMode: 'user' }, audio: false });
+    }
     webcamVideo.srcObject = webcamStream;
     await webcamVideo.play().catch(() => {});
     state.webcam.on = true;
@@ -1436,50 +1443,72 @@ function openDropdown(trigger, panel) {
 $('#colorTrigger').addEventListener('click', () => openDropdown($('#colorTrigger'), $('#colorPanel')));
 $('#weightTrigger').addEventListener('click', () => openDropdown($('#weightTrigger'), $('#weightPanel')));
 
-/* ---------- microphone source ----------
-   Device names are only exposed once mic permission has been granted,
-   so the first open asks for it (and immediately releases the mic). */
-const micPanel = $('#micPanel');
-async function buildMicList() {
+/* ---------- microphone + camera source ----------
+   Device names are only exposed once permission has been granted, so
+   the first open asks for it (and immediately releases the device). */
+async function buildDevicePicker(panel, { kind, title, pref, onPick }) {
+  const list = async () => (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === kind);
   let devs = [];
   try {
-    devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    devs = await list();
     if (devs.length && !devs[0].label) {
-      const tmp = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const tmp = await navigator.mediaDevices.getUserMedia(kind === 'audioinput' ? { audio: true } : { video: true });
       tmp.getTracks().forEach(t => t.stop());
-      devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+      devs = await list();
     }
   } catch { devs = []; }
 
-  micPanel.textContent = '';
+  panel.textContent = '';
   const head = document.createElement('div');
-  head.className = 'mic-head'; head.textContent = 'Record audio from';
-  micPanel.appendChild(head);
+  head.className = 'mic-head'; head.textContent = title;
+  panel.appendChild(head);
   if (!devs.length) {
     const p = document.createElement('div');
-    p.className = 'mic-empty'; p.textContent = 'No microphone found — check permission';
-    micPanel.appendChild(p);
+    p.className = 'mic-empty';
+    p.textContent = `No ${kind === 'audioinput' ? 'microphone' : 'camera'} found — check permission`;
+    panel.appendChild(p);
     return;
   }
-  const current = devs.some(d => d.deviceId === prefs.micId) ? prefs.micId : 'default';
-  for (const d of devs.filter(d => d.deviceId !== 'communications')) {
+  devs = devs.filter(d => d.deviceId !== 'communications');
+  const chosen = devs.find(d => d.deviceId === prefs[pref]) || devs.find(d => d.deviceId === 'default') || devs[0];
+  for (const d of devs) {
     const b = document.createElement('button');
-    b.className = 'mic-opt' + (d.deviceId === current || (current === 'default' && d === devs[0] && !devs.some(x => x.deviceId === 'default')) ? ' is-active' : '');
-    b.textContent = (d.label || 'Microphone').replace(/^Default - /, 'System default · ');
+    b.className = 'mic-opt' + (d === chosen ? ' is-active' : '');
+    b.textContent = (d.label || (kind === 'audioinput' ? 'Microphone' : 'Camera')).replace(/^Default - /, 'System default · ');
     b.addEventListener('click', () => {
-      prefs.micId = d.deviceId === 'default' ? undefined : d.deviceId; savePrefs();
-      if (!state.mic) { state.mic = true; prefs.mic = true; savePrefs(); micBtn.classList.add('is-active'); }
+      prefs[pref] = d.deviceId === 'default' ? undefined : d.deviceId; savePrefs();
       closeDropdowns();
-      toast(`Mic: ${b.textContent}`);
+      onPick(b.textContent);
     });
-    micPanel.appendChild(b);
+    panel.appendChild(b);
   }
 }
+
+const micPanel = $('#micPanel'), camPanel = $('#camPanel');
 $('#micTrigger').addEventListener('click', async () => {
   if (micPanel.classList.contains('is-open')) { closeDropdowns(); return; }
   if (document.body.classList.contains('is-recording')) { toast('Stop recording to change the mic'); return; }
-  await buildMicList();
+  await buildDevicePicker(micPanel, {
+    kind: 'audioinput', title: 'Record audio from', pref: 'micId',
+    onPick: name => {
+      if (!state.mic) { state.mic = true; prefs.mic = true; savePrefs(); micBtn.classList.add('is-active'); }
+      toast(`Mic: ${name}`);
+    },
+  });
   openDropdown($('#micTrigger'), micPanel);
+});
+$('#camTrigger').addEventListener('click', async () => {
+  if (camPanel.classList.contains('is-open')) { closeDropdowns(); return; }
+  await buildDevicePicker(camPanel, {
+    kind: 'videoinput', title: 'Face-cam from', pref: 'camId',
+    onPick: async name => {
+      /* switch live if it's already showing, otherwise turn it on */
+      if (state.webcam.on) stopWebcam();
+      await toggleWebcam();
+      toast(`Camera: ${name}`);
+    },
+  });
+  openDropdown($('#camTrigger'), camPanel);
 });
 document.addEventListener('pointerdown', e => {
   if (!e.target.closest('.dropdown') && !e.target.closest('#dropdownLayer')) closeDropdowns();

@@ -88,7 +88,7 @@ composites exactly what's on screen — both videos, the drawings, the zoom, the
 layout you chose, your face-cam if it's on — into one video file and records
 your microphone over the top. Stop, and it saves an `.mp4` (or offers the iOS
 share sheet) ready to send. This is the piece that replaces the paid apps.
-The small arrow next to **Mic** picks which microphone to record from (built-in,
+The small arrow next to **Face** picks which camera the face-cam uses (built-in, external webcam, iPhone via Continuity Camera). The one next to **Mic** picks which microphone to record from (built-in,
 wireless lav, AirPods…). While recording, a mic icon on the red REC badge pulses
 with your voice so you can see audio is going in; when you stop, the save
 message confirms the file size and whether audio was actually captured. Files
