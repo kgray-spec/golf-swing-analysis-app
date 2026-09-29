@@ -737,11 +737,11 @@ function updateScrubVisibility() {
    Recording — composites exactly what's on the stage into one
    canvas, adds the mic, hands back an MP4/WebM lesson.
    ============================================================ */
-const rec = { mr: null, chunks: [], raf: 0, t0: 0, stream: null, mic: null };
+const rec = { mr: null, chunks: [], raf: 0, t0: 0, stream: null, mic: null, meter: null, peak: 0 };
 
 function recSize() {
   const w = stage.clientWidth || 1280, h = stage.clientHeight || 720;
-  const scale = Math.min(1, 1600 / Math.max(w, h));
+  const scale = Math.min(1, 1280 / Math.max(w, h));
   return { w: Math.round(w * scale / 2) * 2, h: Math.round(h * scale / 2) * 2 };
 }
 
@@ -750,29 +750,32 @@ function recSize() {
    using the recording canvas box), so what's recorded matches what's shown. */
 function webcamRectFor(W, H) {
   const w = state.webcam, short = Math.min(W, H);
-  if (w.expanded) {
-    const size = short * (w.shape === 'circle' ? 0.62 : 0.7);
-    return { x: (W - size) / 2, y: (H - size) / 2, size };
-  }
+  /* expanded = the face-cam takes over the whole stage, for a close demo */
+  if (w.expanded) return { x: 0, y: 0, w: W, h: H, full: true };
   const size = clamp(short * w.sizeFrac, 70, short * 0.5);
-  return { x: clamp(w.xFrac * W, 0, W - size), y: clamp(w.yFrac * H, 0, H - size), size };
+  return { x: clamp(w.xFrac * W, 0, W - size), y: clamp(w.yFrac * H, 0, H - size), w: size, h: size };
 }
 
 function drawWebcam(c, W, H) {
   if (!state.webcam.on || !webcamVideo.videoWidth) return;
-  const { x, y, size } = webcamRectFor(W, H);
+  const { x, y, w, h, full } = webcamRectFor(W, H);
   const vw = webcamVideo.videoWidth, vh = webcamVideo.videoHeight;
-  const scale = Math.max(size / vw, size / vh);
-  const sw = size / scale, sh = size / scale;
+  const scale = Math.max(w / vw, h / vh);
+  const sw = w / scale, sh = h / scale;
   const sx = (vw - sw) / 2, sy = (vh - sh) / 2;
 
   c.save();
   c.beginPath();
-  if (state.webcam.shape === 'circle') c.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-  else roundRect(c, x, y, size, size, size * 0.14);
+  if (full) c.rect(x, y, w, h);
+  else if (state.webcam.shape === 'circle') c.arc(x + w / 2, y + h / 2, w / 2, 0, Math.PI * 2);
+  else roundRect(c, x, y, w, h, w * 0.14);
   c.clip();
-  c.drawImage(webcamVideo, sx, sy, sw, sh, x, y, size, size);
+  /* mirrored, matching the live bubble (CSS scaleX(-1)) */
+  c.translate(x + w, y); c.scale(-1, 1);
+  c.drawImage(webcamVideo, sx, sy, sw, sh, 0, 0, w, h);
   c.restore();
+  if (full) return;
+  const size = w;
 
   c.save();
   c.lineWidth = Math.max(2, size * 0.012);
@@ -834,19 +837,29 @@ async function startRecording() {
   cv.width = w; cv.height = h;
   const c = cv.getContext('2d', { alpha: false });
 
-  const loop = () => { composite(c, w, h); rec.raf = requestAnimationFrame(loop); };
+  const loop = () => { composite(c, w, h); updateMeter(); rec.raf = requestAnimationFrame(loop); };
   loop();
 
   const stream = cv.captureStream(30);
   rec.stream = stream;
 
+  rec.peak = 0;
   if (state.mic) {
+    const base = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
     try {
       rec.mic = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        audio: prefs.micId ? { ...base, deviceId: { exact: prefs.micId } } : base
       });
+    } catch {
+      /* chosen device unplugged since last time — fall back to the default */
+      try { rec.mic = await navigator.mediaDevices.getUserMedia({ audio: base }); }
+      catch { toast('Mic unavailable — recording video only'); }
+    }
+    if (rec.mic) {
       rec.mic.getAudioTracks().forEach(t => stream.addTrack(t));
-    } catch { toast('Mic unavailable — recording video only'); }
+      startMeter(rec.mic);
+      document.body.classList.add('has-audio');
+    }
   }
 
   const mimes = [
@@ -860,7 +873,11 @@ async function startRecording() {
   if (!mime) { toast('Recording not supported in this browser'); stopRecording(true); return; }
 
   rec.chunks = [];
-  rec.mr = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+  /* Compressed at capture: ~0.08 bits per pixel per frame is plenty for
+     mostly-static lesson footage (≈2.2 Mbps at 720p), about a third of
+     the old fixed 6 Mbps — much smaller files with no visible loss. */
+  const vbr = clamp(Math.round(w * h * 30 * 0.08), 1_200_000, 3_500_000);
+  rec.mr = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: vbr, audioBitsPerSecond: 128_000 });
   rec.mr.ondataavailable = e => { if (e.data.size) rec.chunks.push(e.data); };
   rec.mr.onstop = () => finishRecording(mime);
   rec.mr.start(200);
@@ -891,26 +908,54 @@ function stopRecording(silent) {
 function cleanupRec() {
   cancelAnimationFrame(rec.raf);
   if (rec.mic) rec.mic.getTracks().forEach(t => t.stop());
+  if (rec.meter) { rec.meter.ctx.close().catch(() => {}); rec.meter = null; }
+  document.body.classList.remove('has-audio');
   rec.mic = null; rec.stream = null; rec.mr = null;
+}
+
+/* live mic level — drives the pulsing mic icon on the REC badge, and
+   rec.peak tells us afterwards whether any audio actually got in */
+function startMeter(micStream) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser(); an.fftSize = 512;
+    ctx.createMediaStreamSource(micStream).connect(an);
+    rec.meter = { ctx, an, buf: new Float32Array(an.fftSize) };
+  } catch { rec.meter = null; }
+}
+function updateMeter() {
+  if (!rec.meter) return;
+  const { an, buf } = rec.meter;
+  an.getFloatTimeDomainData(buf);
+  let sum = 0; for (const v of buf) sum += v * v;
+  const lvl = Math.min(1, Math.sqrt(sum / buf.length) * 6);
+  rec.peak = Math.max(rec.peak, lvl);
+  $('#recMic').style.setProperty('--lvl', lvl.toFixed(3));
 }
 
 async function finishRecording(mime) {
   const ext  = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
   const blob = new Blob(rec.chunks, { type: mime });
+  const hadMic = !!rec.mic, heard = rec.peak > 0.04;
   cleanupRec();
   if (!blob.size) { toast('Nothing recorded'); return; }
 
   const name = `swing-lesson-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.${ext}`;
   const file = new File([blob], name, { type: mime });
 
+  const mb = (blob.size / 1e6).toFixed(1);
+  const audioNote = !hadMic ? 'no audio (mic off)'
+                  : heard  ? '🎙 audio recorded'
+                  : '⚠︎ mic was on but picked up nothing';
+
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'Swing lesson' }); return; } catch {}
+    try { await navigator.share({ files: [file], title: 'Swing lesson' }); toast(`${mb} MB · ${audioNote}`, 4500); return; } catch {}
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  toast('Lesson saved');
+  toast(`Lesson saved · ${mb} MB · ${audioNote}`, 4500);
 }
 
 /* ============================================================
@@ -941,11 +986,11 @@ let webcamStream  = null;
 function applyWebcam() {
   webcamEl.dataset.shape = state.webcam.shape;
   webcamEl.classList.toggle('is-expanded', state.webcam.expanded);
-  const { x, y, size } = webcamRectFor(stage.clientWidth || 1, stage.clientHeight || 1);
+  const { x, y, w, h } = webcamRectFor(stage.clientWidth || 1, stage.clientHeight || 1);
   webcamEl.style.left = x + 'px';
   webcamEl.style.top = y + 'px';
-  webcamEl.style.width = size + 'px';
-  webcamEl.style.height = size + 'px';
+  webcamEl.style.width = w + 'px';
+  webcamEl.style.height = h + 'px';
 }
 
 async function toggleWebcam() {
@@ -1376,14 +1421,66 @@ function openDropdown(trigger, panel) {
   const r = trigger.getBoundingClientRect();
   const margin = 8;
   const panelH = panel.offsetHeight, panelW = panel.offsetWidth;
-  const top  = clamp(r.top + r.height / 2, panelH / 2 + margin, innerHeight - panelH / 2 - margin);
-  const left = clamp(r.right + 10, margin, innerWidth - panelW - margin);
+  /* rail triggers open to the side; transport ones open upward */
+  const above = !!trigger.closest('#transport');
+  const top  = above
+    ? clamp(r.top - 10 - panelH / 2, panelH / 2 + margin, innerHeight - panelH / 2 - margin)
+    : clamp(r.top + r.height / 2, panelH / 2 + margin, innerHeight - panelH / 2 - margin);
+  const left = above
+    ? clamp(r.left + r.width / 2 - panelW / 2, margin, innerWidth - panelW - margin)
+    : clamp(r.right + 10, margin, innerWidth - panelW - margin);
   panel.style.left = left + 'px';
   panel.style.top  = top + 'px';
   panel.classList.add('is-open');
 }
 $('#colorTrigger').addEventListener('click', () => openDropdown($('#colorTrigger'), $('#colorPanel')));
 $('#weightTrigger').addEventListener('click', () => openDropdown($('#weightTrigger'), $('#weightPanel')));
+
+/* ---------- microphone source ----------
+   Device names are only exposed once mic permission has been granted,
+   so the first open asks for it (and immediately releases the mic). */
+const micPanel = $('#micPanel');
+async function buildMicList() {
+  let devs = [];
+  try {
+    devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    if (devs.length && !devs[0].label) {
+      const tmp = await navigator.mediaDevices.getUserMedia({ audio: true });
+      tmp.getTracks().forEach(t => t.stop());
+      devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    }
+  } catch { devs = []; }
+
+  micPanel.textContent = '';
+  const head = document.createElement('div');
+  head.className = 'mic-head'; head.textContent = 'Record audio from';
+  micPanel.appendChild(head);
+  if (!devs.length) {
+    const p = document.createElement('div');
+    p.className = 'mic-empty'; p.textContent = 'No microphone found — check permission';
+    micPanel.appendChild(p);
+    return;
+  }
+  const current = devs.some(d => d.deviceId === prefs.micId) ? prefs.micId : 'default';
+  for (const d of devs.filter(d => d.deviceId !== 'communications')) {
+    const b = document.createElement('button');
+    b.className = 'mic-opt' + (d.deviceId === current || (current === 'default' && d === devs[0] && !devs.some(x => x.deviceId === 'default')) ? ' is-active' : '');
+    b.textContent = (d.label || 'Microphone').replace(/^Default - /, 'System default · ');
+    b.addEventListener('click', () => {
+      prefs.micId = d.deviceId === 'default' ? undefined : d.deviceId; savePrefs();
+      if (!state.mic) { state.mic = true; prefs.mic = true; savePrefs(); micBtn.classList.add('is-active'); }
+      closeDropdowns();
+      toast(`Mic: ${b.textContent}`);
+    });
+    micPanel.appendChild(b);
+  }
+}
+$('#micTrigger').addEventListener('click', async () => {
+  if (micPanel.classList.contains('is-open')) { closeDropdowns(); return; }
+  if (document.body.classList.contains('is-recording')) { toast('Stop recording to change the mic'); return; }
+  await buildMicList();
+  openDropdown($('#micTrigger'), micPanel);
+});
 document.addEventListener('pointerdown', e => {
   if (!e.target.closest('.dropdown') && !e.target.closest('#dropdownLayer')) closeDropdowns();
 }, true);
@@ -1415,11 +1512,11 @@ addEventListener('keydown', e => {
 
 /* ---------- toast ---------- */
 let toastTimer;
-function toast(msg) {
+function toast(msg, ms = 2000) {
   const t = $('#toast');
   t.textContent = msg; t.classList.add('is-on');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('is-on'), 2000);
+  toastTimer = setTimeout(() => t.classList.remove('is-on'), ms);
 }
 
 /* ---------- boot ---------- */

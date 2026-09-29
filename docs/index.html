@@ -78,7 +78,7 @@
     <button class="chip chip--sm" id="blendToggle" data-blend="normal">Blend</button>
   </div>
 
-  <div class="rec-badge" id="recBadge"><span class="rec-dot rec-dot--live"></span><span id="recTime">0:00</span></div>
+  <div class="rec-badge" id="recBadge"><span class="rec-dot rec-dot--live"></span><span id="recTime">0:00</span><span class="rec-mic" id="recMic" title="Recording audio"><svg viewBox="0 0 24 24" class="ico ico--sm"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></div>
 
   <div class="webcam" id="webcamBubble" data-shape="circle" hidden>
     <video class="webcam__video" autoplay muted playsinline></video>
@@ -182,6 +182,12 @@
       <svg viewBox="0 0 24 24" class="ico ico--sm"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
       <span>Mic</span>
     </button>
+    <div class="dropdown" id="micDropdown">
+      <button class="chip chip--caret" id="micTrigger" title="Choose microphone" aria-label="Choose microphone" aria-haspopup="true">
+        <svg viewBox="0 0 24 24" class="ico ico--sm"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="dropdown__panel" id="micPanel"></div>
+    </div>
     <button class="chip chip--wide" id="btnWebcam" title="Show your face on screen">
       <svg viewBox="0 0 24 24" class="ico ico--sm"><circle cx="12" cy="9" r="3.4"/><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2"/></svg>
       <span>Face</span>

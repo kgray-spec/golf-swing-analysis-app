@@ -88,11 +88,17 @@ composites exactly what's on screen — both videos, the drawings, the zoom, the
 layout you chose, your face-cam if it's on — into one video file and records
 your microphone over the top. Stop, and it saves an `.mp4` (or offers the iOS
 share sheet) ready to send. This is the piece that replaces the paid apps.
+The small arrow next to **Mic** picks which microphone to record from (built-in,
+wireless lav, AirPods…). While recording, a mic icon on the red REC badge pulses
+with your voice so you can see audio is going in; when you stop, the save
+message confirms the file size and whether audio was actually captured. Files
+are compressed as they record (720p-class resolution, ~2 Mbps), roughly a third
+the size of before with no visible quality loss.
 
 **Face** button (bottom transport, next to Mic): shows a small circular or
 square bubble of your webcam, so a student can see you while you talk through
 their swing. Drag it anywhere on screen; tap it to blow it up full-size for a
-close demonstration, tap again to shrink it back. The small circle/square icon
+close demonstration — it fills the whole video area, and records that way — tap again to shrink it back. The small circle/square icon
 in its top-right corner switches shape. It's captured in recordings exactly as
 positioned live.
 
