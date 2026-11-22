@@ -571,6 +571,17 @@ body.sheet-open .sheet{ transform:translate(-50%, 0); }
   #btnFps{ font-size:11px; padding:0 8px; }
 }
 
+/* Mid-width windows (a laptop window, an iPad, or inside My Perform Golf's review screen next to its
+   sidebar): the controls need about 950px in one row, so below that they wrap onto a second row instead
+   of scrolling sideways out of sight with Record last. Phones keep their own rules below. */
+@media (min-width:561px) and (max-width:979px) and (min-height:521px){
+  :root{ --transport-h:182px; }
+  .transport{ flex-wrap:wrap; row-gap:8px; overflow:visible; }
+}
+@media (min-width:561px) and (max-width:700px) and (min-height:521px){
+  :root{ --transport-h:174px; }
+}
+
 /* Phone portrait: let the transport wrap instead of hiding controls
    behind a horizontal scroll — every button stays reachable. */
 @media (orientation:portrait) and (max-width:560px){
