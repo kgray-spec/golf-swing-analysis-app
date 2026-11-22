@@ -132,6 +132,17 @@ drop a clip straight into that pane. See below for filling it automatically.
 
 ---
 
+## Lesson mode (inside My Perform Golf)
+
+My Perform Golf's admin review screen (my.perform.golf/admin/review/<lesson>) shows this app in a frame
+with the golfer's swings already loaded in A and B. When Kerrod stops a recording there, the video goes
+straight back to the lesson page (it uploads, is transcribed and drafted) instead of downloading.
+
+It works with `postMessage` (bottom of `app.js`, "lesson mode"), and only for my.perform.golf and localhost.
+Opened anywhere else, including the Perform Golf community, the app behaves exactly as before.
+
+---
+
 ## Automatic swing submissions (ClickUp → Library)
 
 `sync-swings.js` polls the ClickUp **🏌️ Swing Analysis** list

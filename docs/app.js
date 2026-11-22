@@ -1036,6 +1036,14 @@ async function finishRecording(mime) {
                   : heard  ? '🎙 audio recorded'
                   : '⚠︎ mic was on but picked up nothing';
 
+  /* Lesson mode: inside My Perform Golf's review screen the recording goes straight back to the
+     lesson page (which uploads, transcribes and sends it), instead of a download or share sheet. */
+  if (embed.parent) {
+    embed.post({ type: 'swing:recorded', blob, name, mime, hadMic, heard, mb: +mb });
+    toast(`Recording sent to the lesson · ${mb} MB · ${audioNote}`, 4500);
+    return;
+  }
+
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title: 'Swing lesson' }); toast(`${mb} MB · ${audioNote}`, 4500); return; } catch {}
   }
@@ -1676,6 +1684,33 @@ function toast(msg, ms = 2000) {
   t.textContent = msg; t.classList.add('is-on');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('is-on'), ms);
+}
+
+/* ---------- lesson mode (embedded in My Perform Golf) ----------
+   My Perform Golf's admin review screen loads this app in an iframe and talks to it with postMessage:
+     in:  { type: 'swing:load', deck: 'A'|'B', blob, label }   a golfer's swing (sent as a Blob, so the
+          video is this page's own and the recorder can draw it)
+          { type: 'swing:layout', layout: 'single'|'split'|'pip'|'overlay' }
+     out: { type: 'swing:ready' } once listening, and { type: 'swing:recorded', blob, ... } when a
+          recording stops (see finishRecording).
+   Only these sites can drive it; anywhere else this does nothing and the app works as before. */
+const EMBED_ORIGINS = [/^https:\/\/my\.perform\.golf$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
+const embed = {
+  parent: null,
+  post(msg) { if (this.parent) window.parent.postMessage(msg, this.parent); },
+};
+if (window.parent !== window) {
+  addEventListener('message', e => {
+    if (!EMBED_ORIGINS.some(re => re.test(e.origin))) return;
+    const m = e.data || {};
+    if (m.type === 'swing:hello') { embed.parent = e.origin; document.body.classList.add('is-embedded'); embed.post({ type: 'swing:ready' }); return; }
+    if (!embed.parent || e.origin !== embed.parent) return;
+    if (m.type === 'swing:load' && (m.deck === 'A' || m.deck === 'B') && m.blob instanceof Blob) {
+      (m.deck === 'A' ? A : B).setSource(URL.createObjectURL(m.blob), String(m.label || `Swing ${m.deck}`).slice(0, 80), true);
+    } else if (m.type === 'swing:layout' && ['single', 'split', 'pip', 'overlay'].includes(m.layout)) {
+      setLayout(m.layout);
+    }
+  });
 }
 
 /* ---------- boot ---------- */
