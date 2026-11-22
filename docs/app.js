@@ -943,6 +943,15 @@ async function startRecording() {
       try { rec.mic = await navigator.mediaDevices.getUserMedia({ audio: base }); }
       catch { toast('Mic unavailable — recording video only'); }
     }
+    /* Lesson mode: a lesson with no voice is no use to the golfer (and can't be transcribed), so
+       don't start; tell My Perform Golf, which explains how to allow the microphone. */
+    if (!rec.mic && embed.parent) {
+      if (rec.stream) rec.stream.getTracks().forEach(t => t.stop());
+      cleanupRec();
+      toast('Microphone blocked: allow it for this page, then press Record again', 6000);
+      embed.post({ type: 'swing:mic-blocked' });
+      return;
+    }
     if (rec.mic) {
       rec.mic.getAudioTracks().forEach(t => stream.addTrack(t));
       startMeter(rec.mic);
